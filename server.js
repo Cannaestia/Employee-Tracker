@@ -1,6 +1,5 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
-const { inherits } = require('util');
 require('console.table');
 
 
@@ -13,28 +12,33 @@ const db = mysql.createConnection ({
 
 const prompt = inquirer.createPromptModule();
 
+
 const viewAllDepartments = () => {
-    db.query('SELECT name FROM department', (err, department) => {
+    db.query(`SELECT department.id AS id, department.name AS depart FROM department`, (err, department) => {
         if (err) throw err;
         console.table(department);
-        init ();
+        init();
     });
 };
 
 const viewAllroles = () => {
-    db.query('SELECT title, salary, department_id FROM role', (err, role) => {
+    db.query(`SELECT role.id, role.title, role.salary, department.name FROM role
+              INNER JOIN department ON role.department_id = department.id`, (err, role) => {
         if (err) throw err;
         console.table(role);
-        init ();
+        init();
     });
 };
 
 const viewAllEmployees = () => {
-    db.query('SELECT first_name, last_name, role_id, manager_id FROM employee', (err, employee) => {
+    db.query(`SELECT employee.id, employee.first_name, employee.last_name, role.title, 
+              department.name AS department, role.salary, CONCAT (manager.first_name, " ", manager.last_name) AS manager
+              FROM employee LEFT JOIN role ON employee.role_id = role.id LEFT JOIN department ON role.department_id = department.id
+              LEFT JOIN employee manager ON employee.manager_id = manager.id`, (err, employee) => {
         if (err) throw err;
         console.table(employee);
-        init ();
-    });
+        init();
+    })
 };
 
 const addDepartment = () => {
@@ -116,36 +120,37 @@ const addEmployee = () => {
     })
 }
 
-const updateEmployee = () => {
+const updateEmployeeRole = () => {
     prompt ([
         {
          type: 'input',
-         name: 'first_name',
-         message: 'Please enter employee first name',
+         name: 'id',
+         message: 'Please enter employee id',
         },
-        {
-         type: 'input',
-         name: 'last_name',
-         message: 'Please enter employee last name',
-        },
+        // {
+        //  type: 'input',
+        //  name: 'first_name',
+        //  message: 'Please enter employee first name',
+        // },
+        // {
+        //  type: 'input',
+        //  name: 'last_name',
+        //  message: 'Please enter employee last name',
+        // },
         {
          type: 'input',
          name: 'role_id',
          message: 'Please enter employee role id',
         },
-        {
-         type: 'input',
-         name: 'manager_id',
-         message: 'Please enter the manager id of the employee',
-        },
+        // {
+        //  type: 'input',
+        //  name: 'manager_id',
+        //  message: 'Please enter the manager id of the employee',
+        // },
     ])
     .then((input) => {
-     db.query('UPDATE employee SET first_name = ?' , input, (err) => {
+     db.query('UPDATE employee SET employee.role_id = ? WHERE employee.id = ?', [input.role_id, input.id], (err) => {
         if (err) throw err;
-        console.log (`Saved ${input.first_name}`);
-        console.log (`Saved ${input.last_name}`);
-        console.log (`Saved ${input.role_id}`);
-        console.log (`Saved ${input.manager_id}`);
         init();
      })   
     })
@@ -158,7 +163,7 @@ const deleteDepartment = () => {
         message: 'Please enter Department id'
     })
     .then ((input) => {
-        db.query('DELETE FROM department WHERE id = ?, ', (err, department) => {
+        db.query('DELETE FROM department WHERE id = ?', input.id, (err, department) => {
           if (err) throw err;
           console.table(department);
           init();
@@ -173,7 +178,7 @@ const deleteRole = () => {
         message: 'Please enter the role id'
     })
     .then ((input) => {
-        db.query('DELETE FROM role WHERE id = ?, ', (err, role) => {
+        db.query('DELETE FROM role WHERE id = ?', input.id, (err, role) => {
           if (err) throw err;
           console.table(role);
           init();
@@ -188,7 +193,7 @@ const deleteEmployee = () => {
         message: 'Please enter Employee id'
     })
     .then ((input) => {
-        db.query('DELETE FROM employee WHERE id = ?, ', (err, employee) => {
+        db.query('DELETE FROM employee WHERE id = ?', input.id, (err, employee) => {
           if (err) throw err;
           console.table(employee);
           init();
@@ -230,49 +235,60 @@ const init = () => {
             'View All Employees',
             'Add Employee',
             'Delete Employee',
-            'Update Employee',
+            'Update Employee Role',
             'Exit',
         ],
         message: 'Please select from the list of available options.'
     }).then((answers) => {
         switch(answers.departments) {
             case 'View All Departments': {
-                return viewAllDepartments ();
+                viewAllDepartments ();
+                 break;
             }
-            case 'Add Departments': {
-                return addDepartment ();
+            case 'Add Department': {
+                 addDepartment ();
+                 break;
             }
             case 'Delete Department': {
-                return deleteDepartment ();
+                deleteDepartment ();
+                break;
             }
             case 'View All Roles': {
-                return viewAllroles ();
+                 viewAllroles ();
+                 break;
             }
             case 'Add Role': {
-                return addRole ();
+                addRole ();
+                break;
             }
             case 'Delete Role': {
-                return deleteRole ();
+                deleteRole ();
+                break;
             }
             case 'View All Employees': {
-                return viewAllEmployees ();
+                viewAllEmployees ();
+                break;
             }
             case 'Add Employee': {
-                return addEmployee ();
+                addEmployee ();
+                break;
             }
             case 'Delete Employee': {
-                return deleteEmployee ();
+                deleteEmployee ();
+                break;
             }
-            case 'Update Employee': {
-                return updateEmployee ();
+            case 'Update Employee Role': {
+                updateEmployeeRole ();
+                break;
             }
             default: {
-                return process.exit();
+                process.exit();
+                break;
             }
         }
     })
 }
-
+init();
 
 
 
